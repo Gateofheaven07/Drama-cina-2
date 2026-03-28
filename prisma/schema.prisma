@@ -1,0 +1,79 @@
+// File schema.prisma akan mendefinisikan struktur database kita.
+// Kita menggunakan PostgreSQL sebagai provider database default di sini,
+// namun bisa diubah sesuai kebutuhan (misalnya mysql atau sqlite).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Model User: Menyimpan data pengguna, termasuk admin
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String?
+  password  String     // Menyimpan hash password
+  role      Role       @default(USER) // Membedakan antara pengguna biasa dan admin
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  // Relasi: Seorang pengguna bisa memiliki banyak bookmark (drama yang disimpan)
+  bookmarks Bookmark[]
+}
+
+// Enum Role: Menentukan jenis akses pengguna
+enum Role {
+  USER
+  ADMIN
+}
+
+// Model Drama: Menyimpan serial drama
+model Drama {
+  id          String   @id @default(cuid())
+  title       String   // Judul drama
+  description String?  // Sinopsis atau deskripsi
+  coverImage  String?  // URL atau path gambar cover
+  releaseYear Int?     // Tahun rilis
+  status      String?  // Contoh: "Ongoing", "Completed"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relasi: Satu drama memiliki banyak episode
+  episodes    Episode[]
+  
+  // Relasi: Satu drama dapat masuk ke banyak daftar bookmark pengguna
+  bookmarks   Bookmark[]
+}
+
+// Model Episode: Menyimpan informasi episode dari sebuah drama
+model Episode {
+  id            String   @id @default(cuid())
+  episodeNumber Int      // Nomor episode
+  title         String?  // Judul spesifik untuk episode ini jika ada
+  videoUrl      String   // URL video stream untuk episode tersebut
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relasi balik (Back-relation) ke Drama
+  dramaId       String
+  drama         Drama    @relation(fields: [dramaId], references: [id], onDelete: Cascade)
+}
+
+// Model Bookmark: Menyimpan drama yang difavoritkan/disimpan pengguna
+model Bookmark {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dramaId   String
+  drama     Drama    @relation(fields: [dramaId], references: [id], onDelete: Cascade)
+
+  // Memastikan satu user hanya bisa bookmark drama yang sama satu kali
+  @@unique([userId, dramaId])
+}
