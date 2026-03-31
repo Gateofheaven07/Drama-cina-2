@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { SessionProvider, useSession, signIn, signOut } from 'next-auth/react';
 
 export interface User {
@@ -23,94 +23,86 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const AuthProviderInner = ({ children }: { children: React.ReactNode }) => {
   const { data: session, status } = useSession();
-  const [localUser, setLocalUser] = useState<User | null>(null);
-  const [isLocalLoading, setIsLocalLoading] = useState(true);
+  const [isMutationLoading, setIsMutationLoading] = useState(false);
 
-  // Load local user on mount (for email/pwd mock fallbacks)
-  useEffect(() => {
-    const storedUser = localStorage.getItem('mockUser');
-    if (storedUser) {
-      try {
-        setLocalUser(JSON.parse(storedUser));
-      } catch (e) {
-        console.error('Failed to parse stored user:', e);
-      }
-    }
-    setIsLocalLoading(false);
-  }, []);
-
-  // Compute the current active user (NextAuth session takes priority)
   const isSessionLoading = status === 'loading';
-  const isLoading = isLocalLoading || isSessionLoading;
+  const isLoading = isSessionLoading || isMutationLoading;
 
-  let activeUser: User | null = localUser;
+  let activeUser: User | null = null;
   if (session?.user) {
      activeUser = {
-       id: (session.user as any).id || session.user.email || 'google_user',
+       id: (session.user as any).id || '',
        email: session.user.email || '',
-       name: session.user.name || 'Google User',
+       name: session.user.name || 'User',
      };
   }
 
   const login = async (email: string, password: string) => {
-    if (!email || !password) throw new Error('Email and password are required');
-    setIsLocalLoading(true);
+    if (!email || !password) throw new Error('Email dan password wajib diisi');
+    setIsMutationLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const mockUser: User = {
-        id: `user_${Date.now()}`,
+      const result = await signIn('credentials', {
         email,
-        name: email.split('@')[0],
-      };
-      setLocalUser(mockUser);
-      localStorage.setItem('mockUser', JSON.stringify(mockUser));
+        password,
+        redirect: false,
+      });
+      
+      if (result?.error) {
+        throw new Error(result.error);
+      }
     } finally {
-      setIsLocalLoading(false);
+      setIsMutationLoading(false);
     }
   };
 
   const signup = async (email: string, password: string, name: string) => {
-    if (!email || !password || !name) throw new Error('All fields are required');
-    setIsLocalLoading(true);
+    if (!email || !password || !name) throw new Error('Semua kolom wajib diisi');
+    setIsMutationLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      const mockUser: User = {
-        id: `user_${Date.now()}`,
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Gagal mendaftarkan akun');
+      }
+
+      // Automatically login after successful signup
+      const result = await signIn('credentials', {
         email,
-        name,
-      };
-      setLocalUser(mockUser);
-      localStorage.setItem('mockUser', JSON.stringify(mockUser));
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        throw new Error(`Pendaftaran berhasil, tetapi gagal masuk otomatis: ${result.error}`);
+      }
     } finally {
-      setIsLocalLoading(false);
+      setIsMutationLoading(false);
     }
   };
 
   const logout = async () => {
-    setLocalUser(null);
-    localStorage.removeItem('mockUser');
-    if (session) {
-      await signOut({ redirect: true, callbackUrl: '/' });
+    setIsMutationLoading(true);
+    try {
+      await signOut({ redirect: false });
+      window.location.href = '/';
+    } finally {
+      setIsMutationLoading(false);
     }
   };
 
   const updateProfile = async (name: string) => {
-    if (!activeUser) throw new Error('Not authenticated');
-    setIsLocalLoading(true);
+    if (!activeUser) throw new Error('Tidak terautentikasi');
+    setIsMutationLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      // Only mock update local user, NextAuth update requires server API
-      // For now this will update local user state if not using Google
-      if (!session) {
-        const updatedUser = { ...activeUser, name };
-        setLocalUser(updatedUser);
-        localStorage.setItem('mockUser', JSON.stringify(updatedUser));
-      } else {
-        // Here you would optimally call a backend to update DB if it was real
-        alert("Pembaruan nama pada akun Google tidak dikonfigurasi secara mutasi server-side.");
-      }
+      // In a real scenario, call an API here to update the user in DB
+      alert("Pembaruan nama belum dikonfigurasi secara penuh pada mutasi server-side.");
     } finally {
-      setIsLocalLoading(false);
+      setIsMutationLoading(false);
     }
   };
 
@@ -148,4 +140,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
 
