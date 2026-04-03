@@ -127,7 +127,7 @@ export default function DramaDetailPage({
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
             {/* Poster - Left Side */}
             <div className="md:col-span-1">
-              <div className="relative w-full aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
+              <div className="hidden md:block relative w-full aspect-[2/3] rounded-lg overflow-hidden shadow-lg">
                 <img
                   src={drama.poster}
                   alt={drama.title}

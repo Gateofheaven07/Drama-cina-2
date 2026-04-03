@@ -127,7 +127,7 @@ export default function WatchPage({
           )}
 
           {/* Overlay Controls */}
-          <div className="absolute top-4 left-4">
+          <div className="absolute top-4 left-4 hidden md:block">
             <Link href={`/drama/${drama.id}`}>
               <Button
                 size="sm"
