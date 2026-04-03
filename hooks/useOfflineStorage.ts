@@ -46,7 +46,7 @@ export const useOfflineStorage = (userId: string | null) => {
   // Download an episode (mock implementation)
   const downloadEpisode = useCallback(
     async (
-      episodeId: number,
+      episodeId: string,
       title: string,
       dramaTitle: string,
       episodeNumber: number,
@@ -122,7 +122,7 @@ export const useOfflineStorage = (userId: string | null) => {
 
   // Check if episode is downloaded
   const isEpisodeDownloaded = useCallback(
-    (episodeId: number): boolean => {
+    (episodeId: string): boolean => {
       return downloads.some((d) => d.episodeId === episodeId);
     },
     [downloads]

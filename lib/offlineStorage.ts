@@ -3,7 +3,7 @@
 
 export interface OfflineEpisode {
   id: string; // episodeId_userId
-  episodeId: number;
+  episodeId: string;
   userId: string;
   title: string;
   dramaTitle: string;

@@ -6,14 +6,14 @@ import { Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface BookmarkButtonProps {
-  dramaId: number;
-  size?: 'sm' | 'md' | 'lg';
+  dramaId: string;
+  size?: 'sm' | 'default' | 'lg';
   variant?: 'default' | 'outline' | 'ghost';
 }
 
 export function BookmarkButton({
   dramaId,
-  size = 'md',
+  size = 'default',
   variant = 'outline',
 }: BookmarkButtonProps) {
   const { user } = useAuth();
@@ -41,7 +41,7 @@ export function BookmarkButton({
       if (isBookmarked) {
         // Remove bookmark
         const updated = bookmarks.filter(
-          (id: number) => id !== dramaId
+          (id: string) => id !== dramaId
         );
         localStorage.setItem(key, JSON.stringify(updated));
       } else {

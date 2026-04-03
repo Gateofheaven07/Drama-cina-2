@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Drama } from '@/lib/mockData';
+import { Drama } from '@/lib/api';
 import { Star, Play } from 'lucide-react';
 
 interface DramaCardProps {

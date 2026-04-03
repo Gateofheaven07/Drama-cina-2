@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { DramaCard } from '@/components/DramaCard';
-import { mockDramas } from '@/lib/mockData';
+import { fetchTrendingDramas, fetchLatestDramas, Drama } from '@/lib/api';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 
 const backgroundImages = [
   '/dracin_poster.jpg',
@@ -18,24 +18,38 @@ const backgroundImages = [
 
 export default function Home() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [trending, setTrending] = useState<Drama[]>([]);
+  const [latest, setLatest] = useState<Drama[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length);
     }, 5000);
-
     return () => clearInterval(timer);
   }, []);
 
-  // Get featured dramas (highest rated)
-  const featured = [...mockDramas]
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 3);
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [trendingData, latestData] = await Promise.all([
+          fetchTrendingDramas(),
+          fetchLatestDramas(),
+        ]);
+        setTrending(trendingData);
+        setLatest(latestData);
+      } catch (error) {
+        console.error('Failed to fetch data', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
-  // Get new releases
-  const newReleases = [...mockDramas]
-    .sort((a, b) => b.year - a.year)
-    .slice(0, 6);
+  const featured = trending.slice(0, 3);
+  const newReleases = latest.slice(0, 6);
+  const topRated = trending.slice(0, 6); // Just using trending as top rated for now since we mapped rank sorting to rating
 
   return (
     <>
@@ -64,60 +78,46 @@ export default function Home() {
 
           {/* Content */}
           <div className="relative h-full flex flex-col justify-end px-4 sm:px-6 lg:px-8 py-12 sm:py-16 max-w-7xl mx-auto">
-            <div className="space-y-4">
-              <div className="inline-block">
-                <span className="text-accent font-semibold text-sm">Featured</span>
-              </div>
+            {loading ? (
+               <div className="flex justify-center items-center h-full">
+                 <Loader2 className="h-8 w-8 animate-spin text-accent" />
+               </div>
+            ) : (
+                <div className="space-y-4">
+                  <div className="inline-block">
+                    <span className="text-accent font-semibold text-sm">Unggulan</span>
+                  </div>
 
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground text-balance">
-                {featured[0]?.title}
-              </h1>
+                  <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground text-balance">
+                    {featured[0]?.title || 'Memuat...'}
+                  </h1>
 
-              <p className="text-foreground/70 max-w-2xl text-sm sm:text-base leading-relaxed">
-                {featured[0]?.description}
-              </p>
-
-              <div className="flex items-center gap-3 pt-4">
-                <Link href={`/drama/${featured[0]?.id}`}>
-                  <Button size="lg" className="bg-accent text-accent-foreground">
-                    Start Watching
-                  </Button>
-                </Link>
-
-                <Link href="/browse">
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="border-border hover:bg-muted"
-                  >
-                    Explore All
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-
-              {/* Drama Info */}
-              <div className="flex items-center gap-6 pt-6 text-sm text-muted-foreground border-t border-border">
-                <div>
-                  <p className="text-foreground font-semibold">
-                    {featured[0]?.episodeCount}
+                  <p className="text-foreground/70 max-w-2xl text-sm sm:text-base leading-relaxed line-clamp-3">
+                    {featured[0]?.description}
                   </p>
-                  <p>Episodes</p>
+
+                  <div className="flex items-center gap-3 pt-4">
+                    {featured[0] && (
+                      <Link href={`/drama/${featured[0].id}`}>
+                        <Button size="lg" className="bg-accent text-accent-foreground">
+                          Mulai Menonton
+                        </Button>
+                      </Link>
+                    )}
+
+                    <Link href="/browse">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        className="border-border hover:bg-muted"
+                      >
+                        Jelajahi Semua
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-foreground font-semibold">
-                    {featured[0]?.rating.toFixed(1)}
-                  </p>
-                  <p>Rating</p>
-                </div>
-                <div>
-                  <p className="text-foreground font-semibold">
-                    {featured[0]?.year}
-                  </p>
-                  <p>Year</p>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </section>
 
@@ -126,10 +126,10 @@ export default function Home() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                New Releases
+                Rilis Terbaru
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                Fresh content added regularly
+                Konten baru ditambahkan secara berkala
               </p>
             </div>
             <Link href="/browse">
@@ -138,55 +138,60 @@ export default function Home() {
                 size="sm"
                 className="text-accent hover:text-accent hover:bg-accent/10"
               >
-                View All
+                Lihat Semua
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {newReleases.map((drama) => (
-              <DramaCard key={drama.id} drama={drama} />
-            ))}
-          </div>
+          {loading ? (
+             <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : (
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+               {newReleases.map((drama) => (
+                 <DramaCard key={drama.id} drama={drama} />
+               ))}
+             </div>
+          )}
         </section>
 
-        {/* Top Rated */}
+        {/* Trending (Previously Top Rated) */}
         <section className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16 max-w-7xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                Top Rated
+                Sedang Tren
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                Most loved by our community
+                Paling banyak ditonton komunitas
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {[...mockDramas]
-              .sort((a, b) => b.rating - a.rating)
-              .slice(0, 6)
-              .map((drama) => (
+          {loading ? (
+             <div className="flex justify-center py-10"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {topRated.map((drama) => (
                 <DramaCard key={drama.id} drama={drama} />
               ))}
-          </div>
+            </div>
+          )}
         </section>
 
         {/* CTA Section */}
         <section className="px-4 sm:px-6 lg:px-8 py-12 sm:py-16 max-w-7xl mx-auto">
           <div className="rounded-lg bg-accent/10 border border-accent/30 p-8 sm:p-12 text-center">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-4">
-              Discover More Stories
+              Temukan Lebih Banyak Cerita
             </h2>
             <p className="text-foreground/70 mb-6 max-w-xl mx-auto">
-              Explore our comprehensive collection of Chinese dramas, romance,
-              thrillers, historical epics, and more.
+              Jelajahi koleksi komprehensif drama Tiongkok, romansa,
+              thriller, epik sejarah, dan banyak lagi.
             </p>
             <Link href="/browse">
               <Button size="lg" className="bg-accent text-accent-foreground">
-                Browse Drama
+                Jelajahi Drama
               </Button>
             </Link>
           </div>

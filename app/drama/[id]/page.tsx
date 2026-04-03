@@ -3,11 +3,11 @@
 import { Navbar } from '@/components/Navbar';
 import { EpisodeList } from '@/components/EpisodeList';
 import { AuthGuard } from '@/components/AuthGuard';
-import { getDramaById, getEpisodesForDrama } from '@/lib/mockData';
+import { fetchDramaDetail, fetchAllEpisodes, Drama, Episode } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Heart, Share2, Star } from 'lucide-react';
-import { use, useState } from 'react';
+import { Heart, Share2, Star, Loader2 } from 'lucide-react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 
 export default function DramaDetailPage({
@@ -16,10 +16,41 @@ export default function DramaDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const drama = getDramaById(parseInt(id));
-  const episodes = drama ? getEpisodesForDrama(drama.id) : [];
+  const [drama, setDrama] = useState<Drama | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const [isBookmarked, setIsBookmarked] = useState(false);
+
+  useEffect(() => {
+    async function loadData() {
+      setIsLoading(true);
+      try {
+        const [dramaData, epsData] = await Promise.all([
+          fetchDramaDetail(id),
+          fetchAllEpisodes(id)
+        ]);
+        setDrama(dramaData);
+        setEpisodes(epsData);
+      } catch (error) {
+        console.error('Failed to load drama details', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadData();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <>
+        <Navbar />
+         <main className="px-4 sm:px-6 lg:px-8 py-12 max-w-7xl mx-auto flex justify-center py-20">
+            <Loader2 className="h-8 w-8 animate-spin text-accent" />
+         </main>
+      </>
+    );
+  }
 
   if (!drama) {
     return (
@@ -106,8 +137,8 @@ export default function DramaDetailPage({
 
               {/* Action Buttons */}
               <div className="mt-4 space-y-2">
-                <Link href={`/watch/${episodes[0]?.id}`} className="block">
-                  <Button className="w-full bg-accent text-accent-foreground">
+                <Link href={`/watch/${episodes[0]?.id || ''}?dramaId=${drama.id}`} className="block">
+                  <Button className="w-full bg-accent text-accent-foreground" disabled={episodes.length === 0}>
                     Start Watching
                   </Button>
                 </Link>

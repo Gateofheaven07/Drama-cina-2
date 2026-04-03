@@ -3,7 +3,7 @@
 import { Navbar } from '@/components/Navbar';
 import { DramaCard } from '@/components/DramaCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { mockDramas } from '@/lib/mockData';
+import { fetchDramaDetail, Drama } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -13,15 +13,13 @@ import { ArrowRight, Bookmark, Heart, Download } from 'lucide-react';
 export default function BookmarksPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [bookmarkedDramas, setBookmarkedDramas] = useState(
-    mockDramas.slice(0, 0)
-  );
+  const [bookmarkedDramas, setBookmarkedDramas] = useState<Drama[]>([]);
   const [activeTab, setActiveTab] = useState<'disimpan' | 'disukai' | 'diunduh'>('disimpan');
   const [isLoading, setIsLoading] = useState(true);
 
   // Mock data for new tabs since features are not fully implemented yet
-  const likedDramas: typeof mockDramas = []; 
-  const downloadedDramas: typeof mockDramas = [];
+  const likedDramas: Drama[] = []; 
+  const downloadedDramas: Drama[] = [];
 
   // Protect the page - redirect if not logged in
   useEffect(() => {
@@ -30,17 +28,28 @@ export default function BookmarksPage() {
       return;
     }
 
-    // Load bookmarks from localStorage
-    const bookmarks = JSON.parse(
-      localStorage.getItem(`bookmarks_${user.id}`) || '[]'
-    );
+    async function loadBookmarks() {
+      setIsLoading(true);
+      if(!user) return;
+      try {
+        const bookmarks = JSON.parse(
+          localStorage.getItem(`bookmarks_${user.id}`) || '[]'
+        );
+        if (bookmarks.length > 0) {
+           const fetches = bookmarks.map((id: string) => fetchDramaDetail(id));
+           const results = await Promise.all(fetches);
+           setBookmarkedDramas(results.filter((d): d is Drama => d !== null));
+        } else {
+           setBookmarkedDramas([]);
+        }
+      } catch (err) {
+        console.error('Failed to load bookmarks', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-    const dramas = mockDramas.filter((drama) =>
-      bookmarks.includes(drama.id)
-    );
-
-    setBookmarkedDramas(dramas);
-    setIsLoading(false);
+    loadBookmarks();
   }, [user, router]);
 
   if (isLoading) {

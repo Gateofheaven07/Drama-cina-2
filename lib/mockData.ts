@@ -113,19 +113,19 @@ export const mockDramas: Drama[] = [
   },
   {
     id: 6,
-    title: 'Autumn Requiem',
-    chineseTitle: '秋のレクイエム',
+    title: 'Hidden Love',
+    chineseTitle: '偷偷藏不住',
     description:
-      'A poignant story about aging, loss, and finding meaning in lifes final chapter. Touching hearts across generations.',
+      'Sang Zhi jatuh cinta pada teman kakak laki-lakinya, Duan Jiaxu. Sebuah kisah manis tentang cinta masa muda yang disembunyikan hingga mereka dewasa.',
     poster: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400&h=600&fit=crop',
     backdrop:
       'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1920&h=1080&fit=crop',
-    genre: ['Drama', 'Family', 'Emotional'],
+    genre: ['Romance', 'Youth', 'Comedy'],
     year: 2023,
     status: 'Completed',
     rating: 9.1,
     viewCount: 95000,
-    episodeCount: 12,
+    episodeCount: 25,
   },
 ];
 

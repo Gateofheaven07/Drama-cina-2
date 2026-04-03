@@ -5,48 +5,74 @@ import { DownloadButton } from '@/components/DownloadButton';
 import { BookmarkButton } from '@/components/BookmarkButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { getEpisodesForDrama, getDramaById, mockEpisodes } from '@/lib/mockData';
-import { ArrowLeft } from 'lucide-react';
-import { use } from 'react';
+import { fetchDramaDetail, fetchAllEpisodes, Drama, Episode, fetchDecryptVideo } from '@/lib/api';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
 export default function WatchPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ dramaId?: string }>;
 }) {
   const { id } = use(params);
+  const unwrappedSearchParams = use(searchParams);
+  const dramaId = unwrappedSearchParams.dramaId;
+  
   const { user } = useAuth();
   const router = useRouter();
+  
   const [isLoading, setIsLoading] = useState(true);
+  const [drama, setDrama] = useState<Drama | null>(null);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [decryptedVideoUrl, setDecryptedVideoUrl] = useState<string>('');
 
-  const episode = mockEpisodes.find((ep) => ep.id === parseInt(id));
-  const drama = episode ? getDramaById(episode.dramaId) : null;
-  const episodes = drama ? getEpisodesForDrama(drama.id) : [];
-  const currentEpisodeIndex = episodes.findIndex((ep) => ep.id === episode?.id);
+  const currentEpisodeIndex = episodes.findIndex((ep) => ep.id === id);
+  const episode = currentEpisodeIndex >= 0 ? episodes[currentEpisodeIndex] : null;
   const nextEpisode = episodes[currentEpisodeIndex + 1];
   const prevEpisode = episodes[currentEpisodeIndex - 1];
 
-  // Protect the page - redirect if not logged in
+  // Remove login requirement for watching
+
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
+    async function loadData() {
+      if (!dramaId) {
+        setIsLoading(false);
+        return;
+      }
+      setIsLoading(true);
+      try {
+        const [dramaData, epsData] = await Promise.all([
+          fetchDramaDetail(dramaId),
+          fetchAllEpisodes(dramaId)
+        ]);
+        setDrama(dramaData);
+        setEpisodes(epsData);
+        
+        // Auto decrypt video upon finding episode
+        const currentEp = epsData.find((ep) => ep.id === id);
+        if (currentEp && currentEp.videoUrl) {
+           const decrypted = await fetchDecryptVideo(currentEp.videoUrl);
+           setDecryptedVideoUrl(decrypted || currentEp.videoUrl);
+        }
+      } catch (error) {
+        console.error('Failed to load watch data', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
-    setIsLoading(false);
-  }, [user, router]);
+    loadData();
+  }, [dramaId, id]);
 
   if (isLoading) {
     return (
       <>
         <Navbar />
-        <main className="px-4 sm:px-6 lg:px-8 py-12 max-w-7xl mx-auto">
-          <div className="animate-pulse space-y-4">
-            <div className="h-96 bg-muted rounded" />
-            <div className="h-8 bg-muted rounded w-64" />
-          </div>
+        <main className="px-4 sm:px-6 lg:px-8 py-12 max-w-7xl mx-auto flex justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-accent" />
         </main>
       </>
     );
@@ -62,7 +88,7 @@ export default function WatchPage({
               Episode Not Found
             </h1>
             <p className="text-foreground/70 mb-6">
-              Sorry, we couldn't find the episode you're looking for.
+              Sorry, we couldn't find the episode or drama you're looking for.
             </p>
             <Link href="/browse">
               <Button className="bg-accent text-accent-foreground">
@@ -81,14 +107,24 @@ export default function WatchPage({
       <main className="bg-black/50">
         {/* Video Player Section */}
         <div className="w-full aspect-video bg-black relative flex items-center justify-center">
-          <video
-            src={episode.videoUrl}
-            controls
-            autoPlay
-            className="w-full h-full"
-          >
-            Your browser does not support the video tag.
-          </video>
+          {decryptedVideoUrl ? (
+            <video
+              key={decryptedVideoUrl}
+              src={decryptedVideoUrl}
+              controls
+              autoPlay
+              playsInline
+              crossOrigin="anonymous"
+              className="w-full h-full object-contain"
+            >
+              Your browser does not support the video tag.
+            </video>
+          ) : (
+            <div className="text-white flex flex-col items-center gap-2">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <span>Memuat Video...</span>
+            </div>
+          )}
 
           {/* Overlay Controls */}
           <div className="absolute top-4 left-4">
@@ -123,16 +159,36 @@ export default function WatchPage({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-3 mb-8 pb-8 border-b border-border">
-            <BookmarkButton dramaId={drama.id} size="md" variant="outline" />
+            <BookmarkButton dramaId={drama.id} size="default" variant="outline" />
             <DownloadButton
               episodeId={episode.id}
               episodeTitle={episode.title}
               dramaTitle={drama.title}
               episodeNumber={episode.episodeNumber}
               thumbnail={episode.thumbnail}
-              size="md"
+              size="default"
               variant="outline"
             />
+          </div>
+
+          {/* Episode Selector */}
+          <div className="mb-10 bg-card/30 p-4 sm:p-6 rounded-xl border border-border">
+            <h3 className="text-lg font-bold text-foreground mb-4">
+              Pilih Episode ({episodes.length})
+            </h3>
+            <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+              {episodes.map((ep) => (
+                <Link key={ep.id} href={`/watch/${ep.id}?dramaId=${drama.id}`}>
+                  <Button
+                    variant={ep.id === episode.id ? 'default' : 'outline'}
+                    size="sm"
+                    className={`w-full ${ep.id === episode.id ? 'bg-accent text-accent-foreground' : 'bg-background/50 hover:bg-accent/20 hover:text-accent hover:border-accent'}`}
+                  >
+                    {ep.episodeNumber}
+                  </Button>
+                </Link>
+              ))}
+            </div>
           </div>
 
           {/* Episode Navigation */}
@@ -143,7 +199,7 @@ export default function WatchPage({
                 <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                   PREVIOUS EPISODE
                 </h3>
-                <Link href={`/watch/${prevEpisode.id}`}>
+                <Link href={`/watch/${prevEpisode.id}?dramaId=${drama.id}`}>
                   <div className="group flex gap-4 p-4 border border-border rounded-lg hover:border-accent/50 transition-colors cursor-pointer bg-card/50">
                     <div className="w-32 h-20 rounded flex-shrink-0 bg-muted overflow-hidden">
                       <img
@@ -174,7 +230,7 @@ export default function WatchPage({
                 <h3 className="text-sm font-semibold text-muted-foreground mb-3">
                   NEXT EPISODE
                 </h3>
-                <Link href={`/watch/${nextEpisode.id}`}>
+                <Link href={`/watch/${nextEpisode.id}?dramaId=${drama.id}`}>
                   <div className="group flex gap-4 p-4 border border-border rounded-lg hover:border-accent/50 transition-colors cursor-pointer bg-card/50">
                     <div className="w-32 h-20 rounded flex-shrink-0 bg-muted overflow-hidden">
                       <img

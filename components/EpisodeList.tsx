@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Episode } from '@/lib/mockData';
+import { Episode } from '@/lib/api';
 import { Clock, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
 interface EpisodeListProps {
   episodes: Episode[];
-  dramaId: number;
+  dramaId: string;
   isUserLoggedIn: boolean;
 }
 
@@ -17,7 +17,7 @@ export function EpisodeList({
   dramaId,
   isUserLoggedIn,
 }: EpisodeListProps) {
-  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -39,7 +39,7 @@ export function EpisodeList({
         >
           <div className="flex gap-4 p-4">
             {/* Thumbnail */}
-            <Link href={`/watch/${episode.id}`} className="flex-shrink-0">
+            <Link href={`/watch/${episode.id}?dramaId=${dramaId}`} className="flex-shrink-0">
               <div className="relative w-32 h-20 rounded-lg overflow-hidden bg-muted">
                 <img
                   src={episode.thumbnail || 'https://images.unsplash.com/photo-1505686994434-e3cc5abf1330?w=320&h=180&fit=crop'}
@@ -58,7 +58,7 @@ export function EpisodeList({
 
             {/* Info */}
             <div className="flex-1 min-w-0">
-              <Link href={`/watch/${episode.id}`}>
+              <Link href={`/watch/${episode.id}?dramaId=${dramaId}`}>
                 <h4 className="font-semibold text-foreground group-hover:text-accent transition-colors">
                   Ep {episode.episodeNumber}: {episode.title}
                 </h4>
@@ -80,7 +80,7 @@ export function EpisodeList({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2 flex-shrink-0">
-              <Link href={`/watch/${episode.id}`}>
+              <Link href={`/watch/${episode.id}?dramaId=${dramaId}`}>
                 <Button
                   size="sm"
                   variant={hoveredId === episode.id ? 'default' : 'outline'}

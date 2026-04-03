@@ -7,12 +7,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useOfflineStorage } from '@/hooks/useOfflineStorage';
 
 interface DownloadButtonProps {
-  episodeId: number;
+  episodeId: string;
   episodeTitle: string;
   dramaTitle: string;
   episodeNumber: number;
   thumbnail?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'default' | 'lg';
   variant?: 'default' | 'outline' | 'ghost';
 }
 
@@ -22,7 +22,7 @@ export function DownloadButton({
   dramaTitle,
   episodeNumber,
   thumbnail,
-  size = 'md',
+  size = 'default',
   variant = 'outline',
 }: DownloadButtonProps) {
   const { user } = useAuth();
