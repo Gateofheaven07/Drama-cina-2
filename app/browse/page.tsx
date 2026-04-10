@@ -4,15 +4,29 @@ import { Navbar } from '@/components/Navbar';
 import { DramaCard } from '@/components/DramaCard';
 import { fetchSearchDramas, fetchLatestDramas, Drama } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Input } from '@/components/ui/input';
 import { Search, X, Loader2 } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 
-export default function BrowsePage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+function BrowseContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  const initialQuery = searchParams.get('q') || '';
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [debouncedQuery, setDebouncedQuery] = useState(initialQuery);
   const [dramas, setDramas] = useState<Drama[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Sync debounced query when URL param changes externally
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    if (q !== debouncedQuery) {
+      setSearchQuery(q);
+      setDebouncedQuery(q);
+    }
+  }, [searchParams]);
 
   // Simple debounce
   useEffect(() => {
@@ -30,10 +44,18 @@ export default function BrowsePage() {
           // If no search query, show latest dramas as default browse page
           const data = await fetchLatestDramas();
           setDramas(data);
+          // Only update URL if we need to remove q
+          if (searchParams.get('q')) {
+            router.replace('/browse');
+          }
         } else {
           // Fetch from search API
           const data = await fetchSearchDramas(debouncedQuery);
           setDramas(data);
+          // Sync URL
+          if (searchParams.get('q') !== debouncedQuery) {
+            router.replace(`/browse?q=${encodeURIComponent(debouncedQuery.trim())}`);
+          }
         }
       } catch (error) {
         console.error('Failed to load dramas', error);
@@ -42,7 +64,7 @@ export default function BrowsePage() {
       }
     }
     loadData();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, router, searchParams]);
 
   return (
     <>
@@ -51,10 +73,10 @@ export default function BrowsePage() {
         {/* Page Title */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
-            Browse Dramas
+            Pencarian Drama
           </h1>
           <p className="text-foreground/70">
-            Discover and explore our complete collection
+            Temukan dan jelajahi koleksi lengkap kami
           </p>
         </div>
 
@@ -65,7 +87,7 @@ export default function BrowsePage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search by title..."
+              placeholder="Cari berdasarkan judul, aktor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 bg-card border-border"
@@ -83,7 +105,7 @@ export default function BrowsePage() {
           {/* Results count */}
           <div className="mt-4">
             <div className="text-sm text-muted-foreground">
-              {isLoading ? 'Searching...' : `${dramas.length} ${dramas.length === 1 ? 'drama' : 'dramas'} found`}
+              {isLoading ? 'Sedang mencari...' : `${dramas.length} drama ditemukan`}
             </div>
           </div>
         </div>
@@ -102,7 +124,7 @@ export default function BrowsePage() {
         ) : (
           <div className="text-center py-12">
             <p className="text-foreground/70 text-lg mb-4">
-              No dramas found matching your search.
+              Tidak ada drama yang cocok dengan pencarian Anda.
             </p>
             <Button
               variant="outline"
@@ -110,11 +132,26 @@ export default function BrowsePage() {
                 setSearchQuery('');
               }}
             >
-              Clear Search
+              Hapus Pencarian
             </Button>
           </div>
         )}
       </main>
     </>
+  );
+}
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex justify-center items-center">
+          <Loader2 className="h-10 w-10 animate-spin text-accent" />
+        </div>
+      </div>
+    }>
+      <BrowseContent />
+    </Suspense>
   );
 }

@@ -90,8 +90,8 @@ export const mapApiDramaToDrama = (apiDrama: ApiDrama): Drama => {
     id: apiDrama.bookId,
     title: apiDrama.bookName || 'Unknown Title',
     description: apiDrama.introduction || 'No description available',
-    poster: apiDrama.coverWap,
-    backdrop: apiDrama.coverWap, // fallback since API doesn't seem to provide separate backdrop
+    poster: apiDrama.coverWap || (apiDrama as any).cover || '',
+    backdrop: apiDrama.coverWap || (apiDrama as any).cover || '', // fallback since API doesn't seem to provide separate backdrop
     genre: apiDrama.tags || [],
     year: apiDrama.shelfTime ? new Date(apiDrama.shelfTime).getFullYear() : new Date().getFullYear(),
     status: 'Completed', // fallback

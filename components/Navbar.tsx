@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Menu, Search, User } from 'lucide-react';
+import { Search, User, LogOut } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,17 @@ export function Navbar() {
   const { user, logout } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/browse?q=${encodeURIComponent(searchQuery)}`);
+      setSearchOpen(false);
+      setSearchQuery('');
+    }
+  };
 
   return (
     <header className="border-b border-border bg-background sticky top-0 z-50">
@@ -130,18 +142,26 @@ export function Navbar() {
             )}
           </div>
         </div>
-
-        {/* Mobile Search Bar */}
-        {searchOpen && (
-          <div className="pb-4 md:hidden">
-            <input
-              type="search"
-              placeholder="Search dramas..."
-              className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-        )}
       </div>
+
+      {/* Expanded Search Bar */}
+      {searchOpen && (
+        <div className="absolute top-16 left-0 w-full bg-background/95 backdrop-blur-md border-b border-border p-4 animate-in fade-in slide-in-from-top-2 z-40 shadow-xl">
+          <div className="max-w-3xl mx-auto">
+            <form onSubmit={handleSearch} className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari drama, aktor, atau genre..."
+                className="w-full pl-10 pr-4 py-3 bg-muted/80 border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-accent transition-all"
+                autoFocus
+              />
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Logout Confirmation Dialog */}
       <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
