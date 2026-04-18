@@ -77,17 +77,17 @@ export default function Home() {
       <Navbar />
       <main className="relative">
         {error && (
-          <div className="absolute top-4 left-0 right-0 z-50 flex justify-center px-4">
-            <Alert variant="destructive" className="max-w-2xl bg-destructive text-destructive-foreground border-destructive-foreground/20 shadow-lg">
-              <AlertCircle className="h-5 w-5" color="currentColor" />
-              <AlertTitle className="text-lg font-semibold">Koneksi Error</AlertTitle>
-              <AlertDescription className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <span>{error}</span>
+          <div className="absolute top-4 left-4 right-4 z-50 flex justify-center">
+            <Alert className="w-full max-w-2xl bg-red-950/95 backdrop-blur-md border border-red-800 text-red-100 shadow-2xl">
+              <AlertCircle className="h-5 w-5 !text-red-500" />
+              <AlertTitle className="text-lg font-semibold text-red-50">Koneksi Error</AlertTitle>
+              <AlertDescription className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-sm leading-relaxed opacity-90 break-words">{error}</span>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => loadData()} 
-                  className="bg-transparent hover:bg-destructive-foreground hover:text-destructive border-destructive-foreground flex-shrink-0"
+                  className="w-full sm:w-auto bg-red-900/40 hover:bg-red-800 focus:ring-red-500 hover:text-white border-red-800 text-red-100 flex-shrink-0 transition-all font-medium"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Coba Lagi
