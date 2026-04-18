@@ -6,7 +6,8 @@ import { DramaCard } from '@/components/DramaCard';
 import { fetchTrendingDramas, fetchLatestDramas, Drama } from '@/lib/api';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const backgroundImages = [
   '/dracin_poster.jpg',
@@ -21,6 +22,7 @@ export default function Home() {
   const [trending, setTrending] = useState<Drama[]>([]);
   const [latest, setLatest] = useState<Drama[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -29,23 +31,42 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [trendingData, latestData] = await Promise.all([
-          fetchTrendingDramas(),
-          fetchLatestDramas(),
-        ]);
-        setTrending(trendingData);
-        setLatest(latestData);
-      } catch (error) {
-        console.error('Failed to fetch data', error);
-      } finally {
-        setLoading(false);
-      }
+  const loadData = async (isRetry = false) => {
+    try {
+      if (!isRetry) setLoading(true);
+      const [trendingData, latestData] = await Promise.all([
+        fetchTrendingDramas(),
+        fetchLatestDramas(),
+      ]);
+      setTrending(trendingData);
+      setLatest(latestData);
+      setError(null); // Berhasil, hapus error
+    } catch (err: any) {
+      console.log('Catched fetch api:', err);
+      // err can be a string now (since we throw string in api.ts) or an Error object
+      const errorMessage = typeof err === 'string' ? err : err?.message;
+      setError(errorMessage || 'Gagal memuat data. Server mungkin sedang mengalami gangguan atau offline.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadData();
   }, []);
+
+  // Polling otomatis untuk memuat ulang data saat server kembali online
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (error) {
+      interval = setInterval(() => {
+        loadData(true); // Retry fetch secara background (tanpa memunculkan loading state utuh)
+      }, 10000); // Coba otomatis setiap 10 detik
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    }
+  }, [error]);
 
   const featured = trending.slice(0, 3);
   const newReleases = latest.slice(0, 6);
@@ -54,7 +75,27 @@ export default function Home() {
   return (
     <>
       <Navbar />
-      <main>
+      <main className="relative">
+        {error && (
+          <div className="absolute top-4 left-0 right-0 z-50 flex justify-center px-4">
+            <Alert variant="destructive" className="max-w-2xl bg-destructive text-destructive-foreground border-destructive-foreground/20 shadow-lg">
+              <AlertCircle className="h-5 w-5" color="currentColor" />
+              <AlertTitle className="text-lg font-semibold">Koneksi Error</AlertTitle>
+              <AlertDescription className="mt-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <span>{error}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => loadData()} 
+                  className="bg-transparent hover:bg-destructive-foreground hover:text-destructive border-destructive-foreground flex-shrink-0"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Coba Lagi
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
         {/* Hero Section */}
         <section className="relative w-full h-96 sm:h-[28rem] md:h-[32rem] overflow-hidden bg-background">
           {/* Background Images for smooth transition */}

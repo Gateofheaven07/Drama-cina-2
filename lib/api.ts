@@ -105,13 +105,15 @@ export async function fetchTrendingDramas(): Promise<Drama[]> {
   try {
     const res = await fetch(`${API_BASE}/trending`);
     const data = await res.json();
+    if (!res.ok || data.error) {
+      throw (data.message || data.error || 'Server error');
+    }
     if (Array.isArray(data)) {
       return data.map(mapApiDramaToDrama);
     }
     return [];
   } catch (error) {
-    console.error('Error fetching trending dramas', error);
-    return [];
+    throw error;
   }
 }
 
@@ -119,13 +121,15 @@ export async function fetchLatestDramas(): Promise<Drama[]> {
   try {
     const res = await fetch(`${API_BASE}/latest`);
     const data = await res.json();
+    if (!res.ok || data.error) {
+      throw (data.message || data.error || 'Server error');
+    }
     if (Array.isArray(data)) {
       return data.map(mapApiDramaToDrama);
     }
     return [];
   } catch (error) {
-    console.error('Error fetching latest dramas', error);
-    return [];
+    throw error;
   }
 }
 
